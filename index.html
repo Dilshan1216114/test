@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexGen Bank Management</title>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Dexie.js for IndexedDB -->
+    <script src="https://unpkg.com/dexie@4.0.8/dist/dexie.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Login Section -->
+        <section id="login-section" class="glass-panel login-panel">
+            <div class="login-header">
+                <i class="fa-solid fa-building-columns"></i>
+                <h2>NexGen Bank</h2>
+                <p>Secure Administrator Portal</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="username">Administrator ID</label>
+                    <input type="text" id="username" required placeholder="admin">
+                </div>
+                <div class="input-group">
+                    <label for="password">Security Key</label>
+                    <input type="password" id="password" required placeholder="admin123">
+                </div>
+                <button type="submit" class="btn btn-primary mt-10">
+                    <i class="fa-solid fa-lock"></i> Authenticate
+                </button>
+            </form>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="hidden">
+            <nav class="sidebar glass-panel">
+                <div class="nav-brand">
+                    <i class="fa-solid fa-building-columns"></i>
+                    <h2>NexGen</h2>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#" class="active" data-target="dashboard-tab"><i class="fa-solid fa-chart-line"></i>
+                            Dashboard</a></li>
+                    <li><a href="#" data-target="account-tab"><i class="fa-solid fa-user-plus"></i> New Account</a></li>
+                    <li><a href="#" data-target="inquiry-tab"><i class="fa-solid fa-magnifying-glass"></i> Account
+                            Inquiry</a></li>
+                    <li><a href="#" data-target="transaction-tab"><i class="fa-solid fa-money-right-to-left"></i>
+                            Transactions</a></li>
+                    <li><a href="#" data-target="fd-tab"><i class="fa-solid fa-piggy-bank"></i> Fixed Deposits</a></li>
+                    <li><a href="#" data-target="loan-tab"><i class="fa-solid fa-hand-holding-dollar"></i> Loan
+                            Services</a></li>
+                </ul>
+                <div class="nav-footer">
+                    <button id="logout-btn" class="btn btn-secondary">
+                        <i class="fa-solid fa-right-from-bracket"></i> Secure Logout
+                    </button>
+                </div>
+            </nav>
+
+            <main class="main-content">
+                <div class="user-profile glass-panel" style="padding: 8px 16px;">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff&rounded=true"
+                        alt="Admin">
+                    <span>System Administrator</span>
+                </div>
+
+                <!-- Dashboard Tab -->
+                <div id="dashboard-tab" class="tab-content active">
+                    <header class="tab-header">
+                        <h1>System Overview</h1>
+                        <p>Real-time analytics and banking metrics.</p>
+                    </header>
+                    <div class="stats-grid">
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon primary"><i class="fa-solid fa-users"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Accounts</h3>
+                                <p id="stat-accounts">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon success"><i class="fa-solid fa-vault"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Deposits</h3>
+                                <p id="stat-deposits" class="text-success">$0.00</p>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon warning"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                            <div class="stat-info">
+                                <h3>Active Loans</h3>
+                                <p id="stat-loans">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon danger"><i class="fa-solid fa-piggy-bank"></i></div>
+                            <div class="stat-info">
+                                <h3>Fixed Deposits</h3>
+                                <p id="stat-fds">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="glass-panel">
+                            <h3 style="margin-bottom: 20px; font-weight: 600;">Transaction Volume (Last 30 Days)</h3>
+                            <canvas id="txChart" style="max-height: 280px;"></canvas>
+                        </div>
+                        <div class="glass-panel">
+                            <h3 style="margin-bottom: 20px; font-weight: 600;">Recent Transactions</h3>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Account</th>
+                                            <th>Type</th>
+                                            <th>Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-transactions">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Opening Tab -->
+                <div id="account-tab" class="tab-content hidden">
+                    <header class="tab-header">
+                        <h1>Open New Account</h1>
+                        <p>Register a new client into the NexGen core banking system.</p>
+                    </header>
+                    <div class="glass-panel form-panel">
+                        <h3
+                            style="margin-bottom: 20px; border-bottom: 1px solid var(--clr-border); padding-bottom: 10px;">
+                            <i class="fa-regular fa-address-card text-primary"></i> Client Information
+                        </h3>
+                        <form id="account-form">
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="acc-name">Full Legal Name</label>
+                                    <input type="text" id="acc-name" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="acc-nic">Identification Number (NIC/Passport)</label>
+                                    <input type="text" id="acc-nic" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="acc-phone">Contact Number</label>
+                                    <input type="tel" id="acc-phone" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="acc-type">Account Product</label>
+                                    <select id="acc-type" required>
+                                        <option value="savings">Premium Savings</option>
+                                        <option value="current">Business Current</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label for="acc-address">Residential Address</label>
+                                <textarea id="acc-address" rows="2" required></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label for="acc-initial-deposit">Initial Deposit Amount ($)</label>
+                                <input type="number" id="acc-initial-deposit" min="0" step="0.01" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-10">
+                                <i class="fa-solid fa-check"></i> Provision Account
+                            </button>
+                        </form>
+                    </div>
+                    <div class="glass-panel mt-30 list-panel">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Client Registry</h3>
+                            <div class="search-bar" style="width: 300px;">
+                                <input type="text" id="search-account" placeholder="Search accounts...">
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Account Ref</th>
+                                        <th>Client Name</th>
+                                        <th>Product</th>
+                                        <th>Available Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accounts-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Inquiry Tab -->
+                <div id="inquiry-tab" class="tab-content hidden">
+                    <header class="tab-header">
+                        <h1>Account Inquiry</h1>
+                        <p>Search and verify client account details and generate official documents.</p>
+                    </header>
+                    <div class="glass-panel form-panel" style="max-width: 800px; margin: 0 auto;">
+                        <div class="input-group" style="flex-direction: row; gap: 15px; align-items: flex-end;">
+                            <div style="flex: 1;">
+                                <label for="inq-acc-no">10-Digit Account Number</label>
+                                <input type="text" id="inq-acc-no" placeholder="e.g. 1538290142">
+                            </div>
+                            <button id="btn-inquiry" class="btn btn-primary" style="width: auto;">
+                                <i class="fa-solid fa-magnifying-glass"></i> Search Record
+                            </button>
+                        </div>
+
+                        <div id="inquiry-result" class="hidden mt-30">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--clr-border); padding-bottom: 15px; margin-bottom: 25px;">
+                                <h3 style="margin: 0;"><i class="fa-solid fa-id-card text-primary"></i> Verified Record
+                                    Profile</h3>
+                                <span id="inq-status" class="badge badge-savings">Active</span>
+                            </div>
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <span>Account Number</span>
+                                    <strong id="inq-acc-no-disp" class="text-primary"
+                                        style="font-size: 20px; letter-spacing: 1px;"></strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Available Balance</span>
+                                    <strong id="inq-balance" class="text-success" style="font-size: 24px;"></strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Full Legal Name</span>
+                                    <strong id="inq-name"></strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Identification (NIC)</span>
+                                    <strong id="inq-nic"></strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Product Type</span>
+                                    <strong id="inq-type" style="text-transform: capitalize;"></strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>Account Opened On</span>
+                                    <strong id="inq-date"></strong>
+                                </div>
+                                <div class="detail-item" style="grid-column: span 2;">
+                                    <span>Registered Address</span>
+                                    <strong id="inq-address"></strong>
+                                </div>
+                            </div>
+                            <div style="margin-top: 30px; text-align: right;">
+                                <button id="btn-generate-letter" class="btn btn-secondary" style="width: auto;">
+                                    <i class="fa-solid fa-print"></i> Generate Official Letter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Tab -->
+                <div id="transaction-tab" class="tab-content hidden">
+                    <header class="tab-header">
+                        <h1>Daily Processing</h1>
+                        <p>Execute financial deposits and withdrawals in real-time.</p>
+                    </header>
+                    <div class="glass-panel form-panel" style="max-width: 600px; margin: 0 auto;">
+                        <form id="transaction-form">
+                            <div class="input-group">
+                                <label for="trans-acc-no">10-Digit Account Number</label>
+                                <input type="text" id="trans-acc-no" required>
+                                <div id="trans-acc-details" style="margin-top: 10px; min-height: 24px;"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="trans-type">Operation Type</label>
+                                    <select id="trans-type" required>
+                                        <option value="deposit">Deposit Funds</option>
+                                        <option value="withdrawal">Withdraw Funds</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="trans-amount">Amount ($)</label>
+                                    <input type="number" id="trans-amount" min="1" step="0.01" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-10">
+                                <i class="fa-solid fa-bolt"></i> Execute Operation
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Fixed Deposit Tab -->
+                <div id="fd-tab" class="tab-content hidden">
+                    <header class="tab-header">
+                        <h1>Fixed Term Deposits</h1>
+                        <p>Manage and create high-yield term deposits for clients.</p>
+                    </header>
+                    <div class="glass-panel form-panel" style="max-width: 700px; margin: 0 auto;">
+                        <form id="fd-form">
+                            <div class="input-group">
+                                <label for="fd-acc-no">Linked Savings Account Number</label>
+                                <input type="text" id="fd-acc-no" required>
+                                <div id="fd-acc-details" style="margin-top: 10px; min-height: 24px;"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="fd-amount">Principal Amount ($)</label>
+                                    <input type="number" id="fd-amount" min="1000" step="0.01" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="fd-duration">Term Duration</label>
+                                    <select id="fd-duration" required>
+                                        <option value="3">3 Months (4.5% p.a)</option>
+                                        <option value="6">6 Months (5.5% p.a)</option>
+                                        <option value="12">12 Months (7.2% p.a)</option>
+                                        <option value="24">24 Months (8.5% p.a)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-10">
+                                <i class="fa-solid fa-file-contract"></i> Provision Certificate
+                            </button>
+                        </form>
+                    </div>
+                    <div class="glass-panel mt-30 list-panel">
+                        <h3>Active Term Certificates</h3>
+                        <div class="table-wrapper mt-20">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref No.</th>
+                                        <th>Linked A/C</th>
+                                        <th>Principal</th>
+                                        <th>Term</th>
+                                        <th>Commencement</th>
+                                        <th>Maturity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fds-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loan Section Tab -->
+                <div id="loan-tab" class="tab-content hidden">
+                    <header class="tab-header">
+                        <h1>Credit Facilities</h1>
+                        <p>Approve and disburse personal, auto, and mortgage loans.</p>
+                    </header>
+                    <div class="glass-panel form-panel" style="max-width: 700px; margin: 0 auto;">
+                        <form id="loan-form">
+                            <div class="input-group">
+                                <label for="loan-acc-no">Primary Beneficiary Account Number</label>
+                                <input type="text" id="loan-acc-no" required>
+                                <div id="loan-acc-details" style="margin-top: 10px; min-height: 24px;"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label for="loan-amount">Facility Amount ($)</label>
+                                    <input type="number" id="loan-amount" min="1000" step="0.01" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="loan-type">Facility Product</label>
+                                    <select id="loan-type" required>
+                                        <option value="personal">Personal Loan (12.5% p.a)</option>
+                                        <option value="housing">Mortgage Loan (8.2% p.a)</option>
+                                        <option value="vehicle">Auto Finance (10.0% p.a)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="input-group" style="max-width: 50%;">
+                                <label for="loan-duration">Tenure (Months)</label>
+                                <input type="number" id="loan-duration" min="6" max="360" required
+                                    placeholder="e.g. 60">
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-10">
+                                <i class="fa-solid fa-signature"></i> Approve Facility
+                            </button>
+                        </form>
+                    </div>
+                    <div class="glass-panel mt-30 list-panel">
+                        <h3>Active Credit Facilities</h3>
+                        <div class="table-wrapper mt-20">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Facility Ref</th>
+                                        <th>A/C Linked</th>
+                                        <th>Product</th>
+                                        <th>Total Approved</th>
+                                        <th>Calculated EMI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="loans-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
